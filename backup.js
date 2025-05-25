@@ -2,7 +2,7 @@ const { Cluster } = require('puppeteer-cluster');
 const { faker } = require('@faker-js/faker');
 
 const MEETING_ID = '85082198955';      // Example: 88621666382
-const PASSCODE = 'VusTX7';          // Example: hqnjt1
+const PASSCODE = '0';          // Example: hqnjt1
 const TOTAL_USERS = 10;                    // You can set to 100
 
 (async () => {

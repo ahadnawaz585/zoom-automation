@@ -1,71 +1,66 @@
 const { Cluster } = require('puppeteer-cluster');
 const { faker } = require('@faker-js/faker');
 
-const CONFIG = {
-  MEETING_ID: '82438769057',
-  PASSCODE: '0',
-  TOTAL_USERS: 100,
-  CONCURRENCY: 20,
-  PUPPETEER_OPTS: {
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-gpu',
-      '--disable-dev-shm-usage',
-      '--no-zygote',
-      '--blink-settings=imagesEnabled=false'
-    ],
-    defaultViewport: { width: 1280, height: 720 },
-    timeout: 120000
-  },
-  RETRY_LIMIT: 2,
-  RETRY_DELAY: 5000,
-  JOIN_TIMEOUT: 60000,
-  SELECTOR_TIMEOUT: 15000,
-  JOIN_CONFIRM_TIMEOUT: 30000,
-  STAY_DURATION: 120000,
-  BATCH_DELAY: 5000
-};
+const MEETING_ID = '85082198955';      // Example: 88621666382
+const PASSCODE = 'VusTX7';          // Example: hqnjt1
+const TOTAL_USERS = 10;                    // You can set to 100
 
 (async () => {
   const cluster = await Cluster.launch({
-    concurrency: Cluster.CONCURRENCY_BROWSER,
-    maxConcurrency: CONFIG.CONCURRENCY,
-    puppeteerOptions: CONFIG.PUPPETEER_OPTS,
-    retryLimit: CONFIG.RETRY_LIMIT,
-    retryDelay: CONFIG.RETRY_DELAY
+    concurrency: Cluster.CONCURRENCY_CONTEXT,
+    maxConcurrency: 10,
+    puppeteerOptions: {
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--window-size=1280,720'
+      ]
+    },
+    timeout: 120000
   });
 
-  cluster.task(async ({ page, data: name }) => {
+  await cluster.task(async ({ page, data: name }) => {
     try {
-      await page.goto(`https://app.zoom.us/wc/join/${CONFIG.MEETING_ID}`, { waitUntil: 'domcontentloaded', timeout: CONFIG.JOIN_TIMEOUT });
-      await page.waitForSelector('#input-for-name', { timeout: CONFIG.SELECTOR_TIMEOUT });
+      const joinUrl = `https://app.zoom.us/wc/join/${MEETING_ID}`;
+      await page.goto(joinUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+
+      await page.waitForSelector('#input-for-name', { timeout: 15000 });
       await page.type('#input-for-name', name);
 
       const passField = await page.$('#input-for-pwd');
-      if (passField) await passField.type(CONFIG.PASSCODE);
+      if (passField) {
+        await passField.type(PASSCODE);
+      }
 
-      await new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 1000));
+      await new Promise(resolve => setTimeout(resolve, 3000));
+;
 
       const micSkip = await page.$('.continue-without-mic-camera');
       if (micSkip) await micSkip.click();
+      micSkip.click();
 
-      await (await page.waitForSelector('.zm-btn', { timeout: CONFIG.SELECTOR_TIMEOUT })).click();
-      await page.waitForSelector('.meeting-client', { timeout: CONFIG.JOIN_CONFIRM_TIMEOUT });
+      await new Promise(resolve => setTimeout(resolve, 3000));
+;
 
-      console.log(`[✅] ${name} joined`);
-      await new Promise(resolve => setTimeout(resolve, CONFIG.STAY_DURATION));
+      const joinButton = await page.waitForSelector('.zm-btn', { timeout: 10000 });
+      await joinButton.click();
+
+
+      console.log(`[✅] ${name} joined.`);
+      
+      await new Promise(resolve => setTimeout(resolve, 130000));
+
+
     } catch (err) {
       console.error(`[❌] ${name} failed: ${err.message}`);
     }
   });
 
-  for (let i = 0; i < CONFIG.TOTAL_USERS; i++) {
-    cluster.queue(faker.person.fullName());
-    if ((i + 1) % CONFIG.CONCURRENCY === 0) {
-      await new Promise(resolve => setTimeout(resolve, CONFIG.BATCH_DELAY));
-    }
+  // Queue users
+  for (let i = 0; i < TOTAL_USERS; i++) {
+    const fakeName = faker.person.fullName();
+    cluster.queue(fakeName);
   }
 
   await cluster.idle();
